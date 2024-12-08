@@ -3,19 +3,54 @@ import numpy as np
 import treelib as tl
 
 
-
 class TreeOfLife:
     def __init__(self):
         self.tree = tl.Tree()
-        self.tree.create_node('ROOT', 'ROOT')
-        self.taxonTerm = {'Order': [], 'Family': [], 'Genus': []}
-        self.hierarchy = ['ROOT', 'Order', 'Family', 'Genus']
+        self.taxonTerm = {'Kingdom': [], 'Phylum': [], 'Class': [], 'Order': [], 'Family': [], 'Genus': []}
+        self.hierarchy = ['Kingdom', 'Phylum', 'Class', 'Order', 'Family', 'Genus']
+        self.ignore = ['KINGDOM', 'SUBKINGDOM', 'INFRAKINGDOM', 'Subphylum', 'Subclass', 'Superorder', 'Superclass']
+
+        self.tree.create_node('Plantae', 'Plantae')
+        self.taxonTerm.get('Kingdom').append('Plantae')
 
 
     #arguments:
     #Data: path to species .tree file from kew tree of life explorer
-    def loadData(self, Data):
-        with open(Data) as f:
+    def loadData(self, Orders_File, Kew_Data):
+        with open(Orders_File, encoding="utf8") as O:
+            lines = O.readlines()
+
+            currOn = [None, None, None, None]
+            for line in lines:
+                line = line.replace('\t', '')
+                line = line.replace('"', '')
+                line = line.split(' ')
+
+                if line[0] in self.ignore:
+                    continue
+
+                currTaxa = line[1].strip()
+                try:
+                    if line[0] == self.hierarchy[1]:
+                        self.tree.create_node(currTaxa, currTaxa, parent='Plantae')
+                        self.taxonTerm.get(line[0]).append(currTaxa)
+                        currOn[1] = currTaxa
+                    elif line[0] == self.hierarchy[2]:
+                        self.tree.create_node(currTaxa, currTaxa, parent=currOn[1])
+                        self.taxonTerm.get(line[0]).append(currTaxa)
+                        currOn[2] = currTaxa
+                    elif line[0] == self.hierarchy[3]:
+                        self.tree.create_node(currTaxa, currTaxa, parent=currOn[2])
+                        self.taxonTerm.get(line[0]).append(currTaxa)
+                        currOn[3] = currTaxa
+                    elif line[0] == self.hierarchy[4]:
+                        self.tree.create_node(currTaxa, currTaxa, parent=currOn[3])
+                        self.taxonTerm.get(line[0]).append(currTaxa)
+
+                except:
+                    continue
+
+        with open(Kew_Data, encoding="utf8") as f:
             lines = f.readlines()
             for line in lines:
                 line = line.replace(')', '')
@@ -27,7 +62,7 @@ class TreeOfLife:
                         if taxa not in self.tree.all_nodes():
                             try:
                                 if i == 0:
-                                    self.tree.create_node(taxa, taxa, parent='ROOT')
+                                    self.tree.create_node(taxa, taxa, parent='Plantae')
                                     self.taxonTerm.get('Order').append(taxa)
                                 else:
                                     self.tree.create_node(taxa, taxa, parent=taxon[i - 1])
@@ -39,9 +74,10 @@ class TreeOfLife:
                                 continue
 
 
-    #arguments:
-    #taxa: taxa you want to get broader term for i.e. 'Brassica'
-    #term: (optional), default is next term up i.e. if taxa is 'Genus', then term='Family' if term is unspecified. Can be specified to be higher than next level up i.e. term='Order'
+    # arguments:
+    # taxa: taxa you want to get broader term for i.e. 'Brassica'
+    # term: (optional), default is next term up i.e. if taxa is 'Genus', then term='Family' if term is unspecified. Can be specified to be higher than next level up i.e. term='Order'
+    # returns a string
     def getBroaderTerm(self, taxa, term=''):
         if len(taxa.split(' ')) > 1:
             taxa = taxa.split(' ')[0]
@@ -62,6 +98,9 @@ class TreeOfLife:
             currTaxa = self.tree.parent(currTaxa).tag
 
 
+    # arguments:
+    # taxa: taxa you want to get narrower terms for i.e. 'Cyclanthaceae'
+    # returns a list of strings
     def getNarrowerTerms(self, taxa):
         if len(taxa.split(' ')) > 1:
             taxa = taxa.split(' ')[0]
@@ -78,7 +117,7 @@ class TreeOfLife:
 
 def demo():
     X = TreeOfLife()
-    X.loadData('treeoflife.3.0.tree')
+    X.loadData('HigherTaxa.txt', 'treeoflife.3.0.tree')
     while(True):
         print('taxa:')
         taxa = input()
@@ -86,6 +125,4 @@ def demo():
         term = input()
         print(X.getBroaderTerm(taxa, term))
 
-X = TreeOfLife()
-X.loadData('treeoflife.3.0.tree')
-print(X.getNarrowerTerms('cyclanthaceae'))
+demo()
