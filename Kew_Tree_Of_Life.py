@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import treelib as tl
+import functools
+import operator
 
 
 class TreeOfLife:
@@ -16,7 +18,7 @@ class TreeOfLife:
 
     #arguments:
     #Data: path to species .tree file from kew tree of life explorer
-    def loadData(self, Orders_File, Kew_Data):
+    def loadData(self, Kew_Data, Orders_File=''):
         with open(Orders_File, encoding="utf8") as O:
             lines = O.readlines()
 
@@ -84,18 +86,19 @@ class TreeOfLife:
         taxa = taxa.lower()
         taxa = taxa.capitalize()
 
-        if term == '':
-            for key in self.taxonTerm:
-                if taxa in self.taxonTerm.get(key): 
-                    term = self.hierarchy[self.hierarchy.index(key) - 1]
+        if taxa in functools.reduce(operator.iconcat, self.taxonTerm.values(), []):
+            if term == '':
+                for key in self.taxonTerm:
+                    if taxa in self.taxonTerm.get(key): 
+                        term = self.hierarchy[self.hierarchy.index(key) - 1]
 
 
-        term = term.capitalize()
-        currTaxa = self.tree.parent(taxa).tag
-        while (True):
-            if currTaxa in self.taxonTerm.get(term):
-                return currTaxa
-            currTaxa = self.tree.parent(currTaxa).tag
+            term = term.capitalize()
+            currTaxa = self.tree.parent(taxa).tag
+            while (True):
+                if currTaxa in self.taxonTerm.get(term):
+                    return currTaxa
+                currTaxa = self.tree.parent(currTaxa).tag
 
 
     # arguments:
@@ -107,22 +110,21 @@ class TreeOfLife:
         taxa = taxa.lower()
         taxa = taxa.capitalize()
 
-        output = []
+        if taxa in functools.reduce(operator.iconcat, self.taxonTerm.values(), []):
+            output = []
 
-        for i in self.tree.children(taxa):
-            output.append(i.tag)
-        
-        return output
+            for i in self.tree.children(taxa):
+                output.append(i.tag)
+            
+            return output
 
 
 def demo():
     X = TreeOfLife()
-    X.loadData('HigherTaxa.txt', 'treeoflife.3.0.tree')
+    X.loadData('treeoflife.3.0.tree', 'HigherTaxa.txt')
     while(True):
-        print('taxa:')
-        taxa = input()
-        print('term:')
-        term = input()
+        taxa = input("taxa: ")
+        term = input("term: ")
         print(X.getBroaderTerm(taxa, term))
 
 demo()
