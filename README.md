@@ -8,8 +8,8 @@ and stored in a .txt file. Revisions made at the level of Order or Above must be
 
 
 The example code below creates a new TreeOfLife object, X.
-Using the loadData method, we can load the .txt file containing higher taxa, as well as the Kew .tree file
-the loadData method takes a long time (about a minute and a half) because parsing the .tree file is slow
+Using the loadData method, we can load the .txt file containing higher taxa, as well as the Kew .tree file.
+The loadData method takes a long time (about a minute and a half) because parsing the .tree file is slow
 
   X = TreeOfLife()
   X.loadTreeFile('treeoflife.3.0.tree', 'HigherTaxa.txt')
