@@ -1,8 +1,5 @@
-import pandas as pd
 import numpy as np
 import treelib as tl
-import functools
-import operator
 
 
 class TreeOfLife:
@@ -18,11 +15,11 @@ class TreeOfLife:
 
     #arguments:
     #Data: path to species .tree file from kew tree of life explorer
-    def loadData(self, Kew_Data, Orders_File=''):
+    def loadTreeFile(self, Kew_Data, Orders_File):
         with open(Orders_File, encoding="utf8") as O:
             lines = O.readlines()
 
-            currOn = [None, None, None, None]
+            currOn = [None, None, None]
             for line in lines:
                 line = line.replace('\t', '')
                 line = line.replace('"', '')
@@ -32,25 +29,23 @@ class TreeOfLife:
                     continue
 
                 currTaxa = line[1].strip()
-                try:
+                if currTaxa != 'N.N.':
                     if line[0] == self.hierarchy[1]:
                         self.tree.create_node(currTaxa, currTaxa, parent='Plantae')
                         self.taxonTerm.get(line[0]).append(currTaxa)
-                        currOn[1] = currTaxa
+                        currOn[0] = currTaxa
                     elif line[0] == self.hierarchy[2]:
+                        self.tree.create_node(currTaxa, currTaxa, parent=currOn[0])
+                        self.taxonTerm.get(line[0]).append(currTaxa)
+                        currOn[1] = currTaxa
+                    elif line[0] == self.hierarchy[3]:
                         self.tree.create_node(currTaxa, currTaxa, parent=currOn[1])
                         self.taxonTerm.get(line[0]).append(currTaxa)
                         currOn[2] = currTaxa
-                    elif line[0] == self.hierarchy[3]:
+                    elif line[0] == self.hierarchy[4]:
                         self.tree.create_node(currTaxa, currTaxa, parent=currOn[2])
                         self.taxonTerm.get(line[0]).append(currTaxa)
-                        currOn[3] = currTaxa
-                    elif line[0] == self.hierarchy[4]:
-                        self.tree.create_node(currTaxa, currTaxa, parent=currOn[3])
-                        self.taxonTerm.get(line[0]).append(currTaxa)
 
-                except:
-                    continue
 
         with open(Kew_Data, encoding="utf8") as f:
             lines = f.readlines()
@@ -61,19 +56,16 @@ class TreeOfLife:
                 for group in groups:
                     taxon = group.split('_')
                     for i, taxa in enumerate(taxon):
-                        if taxa not in self.tree.all_nodes():
-                            try:
-                                if i == 0:
-                                    self.tree.create_node(taxa, taxa, parent='Plantae')
-                                    self.taxonTerm.get('Order').append(taxa)
-                                else:
-                                    self.tree.create_node(taxa, taxa, parent=taxon[i - 1])
-                                    if i == 1:
-                                        self.taxonTerm.get('Family').append(taxa)
-                                    elif i == 2:
-                                        self.taxonTerm.get('Genus').append(taxa)
-                            except:
-                                continue
+                        if taxa not in {node.tag for node in self.tree.all_nodes()}:
+                            if i == 0:
+                                self.tree.create_node(taxa, taxa, parent='Plantae')
+                                self.taxonTerm.get('Order').append(taxa)
+                            else:
+                                self.tree.create_node(taxa, taxa, parent=taxon[i - 1])
+                                if i == 1:
+                                    self.taxonTerm.get('Family').append(taxa)
+                                elif i == 2:
+                                    self.taxonTerm.get('Genus').append(taxa)
 
 
     # arguments:
@@ -86,7 +78,7 @@ class TreeOfLife:
         taxa = taxa.lower()
         taxa = taxa.capitalize()
 
-        if taxa in functools.reduce(operator.iconcat, self.taxonTerm.values(), []):
+        if taxa in {node.tag for node in self.tree.all_nodes()}:
             if term == '':
                 for key in self.taxonTerm:
                     if taxa in self.taxonTerm.get(key): 
@@ -98,7 +90,9 @@ class TreeOfLife:
             while (True):
                 if currTaxa in self.taxonTerm.get(term):
                     return currTaxa
-                currTaxa = self.tree.parent(currTaxa).tag
+                parent = self.tree.parent(currTaxa)
+                currTaxa = parent.tag if parent else None
+
 
 
     # arguments:
@@ -110,7 +104,7 @@ class TreeOfLife:
         taxa = taxa.lower()
         taxa = taxa.capitalize()
 
-        if taxa in functools.reduce(operator.iconcat, self.taxonTerm.values(), []):
+        if taxa in {node.tag for node in self.tree.all_nodes()}:
             output = []
 
             for i in self.tree.children(taxa):
@@ -121,7 +115,7 @@ class TreeOfLife:
 
 def demo():
     X = TreeOfLife()
-    X.loadData('treeoflife.3.0.tree', 'HigherTaxa.txt')
+    X.loadTreeFile('treeoflife.3.0.tree', 'HigherTaxa.txt')
     while(True):
         taxa = input("taxa: ")
         term = input("term: ")
